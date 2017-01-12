@@ -7,6 +7,10 @@
 Adxl345 adxlDev1 = Adxl345(device1Address);
 Adxl345 adxlDev2 = Adxl345(device2Address);
 
+int redLed = 13;
+int yellowLed = 12;
+int greenLed = 11;
+
 #define dev1OffsetX -64.00
 #define dev1OffsetY -67.00
 #define dev1OffsetZ 172.00
@@ -26,6 +30,14 @@ Adxl345 adxlDev2 = Adxl345(device2Address);
 void setup()
 {
   Serial.begin(9600);  // start serial for output
+
+  pinMode(redLed, OUTPUT);
+  pinMode(yellowLed, OUTPUT);
+  pinMode(greenLed, OUTPUT);
+
+  digitalWrite(redLed, LOW);
+  digitalWrite(yellowLed, LOW);
+  digitalWrite(greenLed, LOW);
   
   AccelCalibration offsetDev1;
   AccelCalibration gainDev1;
@@ -73,8 +85,29 @@ void loop()
   Serial.print("Different:"); Serial.print (abs(data2.x-data.x)); Serial.print(" "); Serial.print(abs(data2.y-data.y)); Serial.print(" "); Serial.print(abs(data2.z-data.z));
   Serial.println();
   Serial.println();
+
+  if((abs(data2.x-data.x)) > 0.3) {
+    digitalWrite(redLed, HIGH);
+  }
+  else {
+    digitalWrite(redLed, LOW);
+  }
+
+  if((abs(data2.y-data.y)) > 0.3) {
+    digitalWrite(yellowLed, HIGH);
+  }
+  else {
+    digitalWrite(yellowLed, LOW);
+  }
+
+  if((abs(data2.z-data.z)) > 0.3) {
+    digitalWrite(greenLed, HIGH);
+  }
+  else {
+    digitalWrite(greenLed, LOW);
+  }
  
-  delay(2000);
+  delay(200);
 }
 
 
