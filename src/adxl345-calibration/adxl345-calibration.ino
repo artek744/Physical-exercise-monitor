@@ -15,18 +15,31 @@ int AccelMaxY = -1000;
 int AccelMinZ = 1000;
 int AccelMaxZ = -1000; 
 
+
+#define TCAADDR 0x70
+
+void tcaselect(uint8_t i) {
+  if (i > 7) return;
+  Wire.beginTransmission(TCAADDR);
+  Wire.write(1 << i);
+  Wire.endTransmission();
+}
+
+
 void setup()
 {
   Serial.begin(9600);  // start serial for output
-  
+  Serial.println("START");
   adxl.powerOn();
   adxl.setRangeSetting(4);
-  Serial.print("Attempt: ");            
+
+  Serial.print("Attempt: ");
 }
 
 void loop()
 {
-  
+  tcaselect(7);
+
   Serial.print(counter+1);
   Serial.print("  ");
   
@@ -47,7 +60,7 @@ void loop()
 //  Serial.print("Accel Maximums: "); Serial.print(AccelMaxX); Serial.print("  ");Serial.print(AccelMaxY); Serial.print("  "); Serial.print(AccelMaxZ); Serial.println();
 //  Serial.print("Accel Minimums: "); Serial.print(AccelMinX); Serial.print("  ");Serial.print(AccelMinY); Serial.print("  "); Serial.print(AccelMinZ); Serial.println();
 //  Serial.println();
-
+j
   while (Serial.available())
   {
     Serial.read();                    // Clear buffer
@@ -68,13 +81,13 @@ void loop()
     gainZ = 0.5 * (AccelMaxZ - AccelMinZ);
 
     Serial.println("CALIBRATED VALUES");
-    Serial.print("OFFSET:  x:"); Serial.print(offX); Serial.print("   y:");Serial.print(offY); Serial.print("   z:"); Serial.print(offZ); Serial.println();
-    Serial.print("GAIN:  x:"); Serial.print(gainX); Serial.print("   y:");Serial.print(gainY); Serial.print("   z:"); Serial.print(gainZ); Serial.println();
+    Serial.print("OFFSET: "); Serial.print(offX); Serial.print(" ");Serial.print(offY); Serial.print(" "); Serial.print(offZ); Serial.println();
+    Serial.print("GAIN: "); Serial.print(gainX); Serial.print(" ");Serial.print(gainY); Serial.print(" f
+    "); Serial.print(gainZ); Serial.println();
     Serial.println();
-    ;     
+    while(1);
   }
 }
-
 
 
 
