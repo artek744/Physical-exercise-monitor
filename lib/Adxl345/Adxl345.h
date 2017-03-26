@@ -9,48 +9,36 @@
 #define ADXL345_POWER_CTL 0x2d
 #define ADXL345_DATA_FORMAT 0x31
 #define ADXL345_DATAX0 0x32
- 
-struct AccelRaw
+#define ADXL345_DEVICE_ADDRESS 0x53 
+
+struct AxisesData
 {
-   int x;
-   int y;
-   int z;
-};
- 
-struct AccelCalibration
-{
-   double x;
-   double y;
-   double z;
-};
- 
-struct AccelRotation
-{
-   double pitch;
-   double roll;
+   float x;
+   float y;
+   float z;
 };
  
 class Adxl345
 {
 
 public:
-   Adxl345(int deviceAddr = 0x53);
+   Adxl345();
    void powerOn();
    void setRangeSetting(int val);
-   void calibrate(const AccelCalibration &offset, const AccelCalibration &gain);
-   void writeTo(byte address, byte val);
-   void readFrom(byte address, int num, byte buff[]);
-   AccelRaw readAccelRaw();
-   AccelCalibration readAccelCalibrated();
-
+   void calibrate(const AxisesData &offset, const AxisesData &gain);
+   AxisesData readAccelRaw();
+   AxisesData readAccelCalibrated();
+ 
 private:
-   int deviceAddress;
-   double offsetX;
-   double offsetY;
-   double offsetZ;
-   double gainX;
-   double gainY;
-   double gainZ;      
+   void readFrom(byte address, int num, byte buff[]);
+   void writeTo(byte address, byte val);
+
+   float offsetX;
+   float offsetY;
+   float offsetZ;
+   float gainX;
+   float gainY;
+   float gainZ;      
      
 };
  

@@ -1,13 +1,12 @@
 #include "Adxl345.h"
 
-Adxl345::Adxl345(int deviceAddr)
+Adxl345::Adxl345()
 {
-   deviceAddress=deviceAddr;
+
 }
 
 void Adxl345::powerOn()
 {
-   Wire.begin();
    writeTo(0x2D, 0);      
    writeTo(0x2D, 16);
    writeTo(0x2D, 8);
@@ -38,7 +37,7 @@ void Adxl345::setRangeSetting(int val) {
 	writeTo(ADXL345_DATA_FORMAT, _s);
 }
 
-void Adxl345::calibrate(const AccelCalibration &offset, const AccelCalibration &gain)
+void Adxl345::calibrate(const AxisesData &offset, const AxisesData &gain)
 {
    this->offsetX = offset.x;
    this->offsetY = offset.y;
@@ -50,7 +49,7 @@ void Adxl345::calibrate(const AccelCalibration &offset, const AccelCalibration &
 
 void Adxl345::writeTo(byte regAddress, byte val) 
 {
-   Wire.beginTransmission(deviceAddress); //start transmission to device 
+   Wire.beginTransmission(ADXL345_DEVICE_ADDRESS); //start transmission to device 
    Wire.write(regAddress);        // send register address
    Wire.write(val);        // send value to write
    Wire.endTransmission(); //end transmission
@@ -58,12 +57,12 @@ void Adxl345::writeTo(byte regAddress, byte val)
 
 void Adxl345::readFrom(byte regAddress, int num, byte buff[]) 
 {
-   Wire.beginTransmission(deviceAddress); //start transmission to device 
+   Wire.beginTransmission(ADXL345_DEVICE_ADDRESS); //start transmission to device 
    Wire.write(regAddress);        //sends address to read from
    Wire.endTransmission(); //end transmission
    
-   Wire.beginTransmission(deviceAddress); //start transmission to device (initiate again)
-   Wire.requestFrom(deviceAddress, num);    // request 6 bytes from device
+   Wire.beginTransmission(ADXL345_DEVICE_ADDRESS); //start transmission to device (initiate again)
+   Wire.requestFrom(ADXL345_DEVICE_ADDRESS, num);    // request 6 bytes from device
    
    int i = 0;
    while(Wire.available())    //device may send less than requested (abnormal)
@@ -74,12 +73,12 @@ void Adxl345::readFrom(byte regAddress, int num, byte buff[])
    Wire.endTransmission(); //end transmission
 }
 
-AccelRaw Adxl345::readAccelRaw() 
+AxisesData Adxl345::readAccelRaw() 
 {
    byte _buff[6];
    readFrom(ADXL345_DATAX0, ADXL345_TO_READ, _buff); //read the acceleration data from the ADXL345
  
-   AccelRaw raw;
+   AxisesData raw;
    raw.x = (((int)_buff[1]) << 8) | _buff[0];
    raw.y = (((int)_buff[3]) << 8) | _buff[2];
    raw.z = (((int)_buff[5]) << 8) | _buff[4];
@@ -87,12 +86,12 @@ AccelRaw Adxl345::readAccelRaw()
    return raw;
 }
 
-AccelCalibration Adxl345::readAccelCalibrated()
+AxisesData Adxl345::readAccelCalibrated()
 {
-   AccelRaw raw;
+   AxisesData raw;
    raw = readAccelRaw();
 
-   AccelCalibration calibrated; 
+   AxisesData calibrated; 
 
    calibrated.x = (raw.x - offsetX)/gainX;
    calibrated.y = (raw.y - offsetY)/gainY;
@@ -100,3 +99,4 @@ AccelCalibration Adxl345::readAccelCalibrated()
    
    return calibrated;   
 }
+
