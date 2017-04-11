@@ -44,15 +44,15 @@ void tcaselect(uint8_t i) {
   Wire.endTransmission();
 }
 
-void setupDevice(const Adxl345 *device, AxisesData offset, AxisesData gain) {
+void setupDevice(const Adxl345 *device, Axes offset, Axes gain) {
   device->powerOn();
   device->setRangeSetting(4);            
   device->calibrate(offset, gain);
 }
 
-AxisesData createCalibrationStructure(float x, float y, float z)
+Axes createCalibrationStructure(float x, float y, float z)
 {
-  AxisesData calibrationStructure;
+  Axes calibrationStructure;
   calibrationStructure.x = x;
   calibrationStructure.y = y;
   calibrationStructure.z = z;
@@ -60,59 +60,73 @@ AxisesData createCalibrationStructure(float x, float y, float z)
   return calibrationStructure;
 }
 
+int ledPin = 8;
+
 void setup()
 {
+  pinMode(ledPin, OUTPUT);
+  
   Wire.begin();
   Serial.begin(9600);  // start serial for output
   Serial.println("\n\nSTART:\n");
 
-  AxisesData offsetDev1 = createCalibrationStructure(DEV1_OFFSET_X, DEV1_OFFSET_Y, DEV1_OFFSET_Z);
-  AxisesData gainDev1 = createCalibrationStructure(DEV1_GAIN_X, DEV1_GAIN_Y, DEV1_GAIN_Z);
+  Axes offsetDev1 = createCalibrationStructure(DEV1_OFFSET_X, DEV1_OFFSET_Y, DEV1_OFFSET_Z);
+  Axes gainDev1 = createCalibrationStructure(DEV1_GAIN_X, DEV1_GAIN_Y, DEV1_GAIN_Z);
   
-  AxisesData offsetDev2 = createCalibrationStructure(DEV2_OFFSET_X, DEV2_OFFSET_Y, DEV2_OFFSET_Z);
-  AxisesData gainDev2 = createCalibrationStructure(DEV2_GAIN_X, DEV2_GAIN_Y, DEV2_GAIN_Z);
+  Axes offsetDev2 = createCalibrationStructure(DEV2_OFFSET_X, DEV2_OFFSET_Y, DEV2_OFFSET_Z);
+  Axes gainDev2 = createCalibrationStructure(DEV2_GAIN_X, DEV2_GAIN_Y, DEV2_GAIN_Z);
   
-  AxisesData offsetDev3 = createCalibrationStructure(DEV3_OFFSET_X, DEV3_OFFSET_Y, DEV3_OFFSET_Z);
-  AxisesData gainDev3 = createCalibrationStructure(DEV3_GAIN_X, DEV3_GAIN_Y, DEV3_GAIN_Z);
-  
-  AxisesData offsetDev4 = createCalibrationStructure(DEV4_OFFSET_X, DEV4_OFFSET_Y, DEV4_OFFSET_Z);
-  AxisesData gainDev4 = createCalibrationStructure(DEV4_GAIN_X, DEV4_GAIN_Y, DEV4_GAIN_Z);
+//  Axes offsetDev3 = createCalibrationStructure(DEV3_OFFSET_X, DEV3_OFFSET_Y, DEV3_OFFSET_Z);
+//  Axes gainDev3 = createCalibrationStructure(DEV3_GAIN_X, DEV3_GAIN_Y, DEV3_GAIN_Z);
+//  
+//  Axes offsetDev4 = createCalibrationStructure(DEV4_OFFSET_X, DEV4_OFFSET_Y, DEV4_OFFSET_Z);
+//  Axes gainDev4 = createCalibrationStructure(DEV4_GAIN_X, DEV4_GAIN_Y, DEV4_GAIN_Z);
   
   tcaselect(0);
   setupDevice(&adxlDev1, offsetDev1, gainDev1);
   tcaselect(1);
   setupDevice(&adxlDev2, offsetDev2, gainDev2);
-  tcaselect(2);
-  setupDevice(&adxlDev3, offsetDev3, gainDev3);
-  tcaselect(3);
-  setupDevice(&adxlDev4, offsetDev4, gainDev4);
-
 }
 
-void printData(int devNumber, AxisesData data) {
-//  Serial.print("DEV:"); Serial.print(devNumber); Serial.print(" "); Serial.print (data.x); Serial.print(" "); Serial.print(data.y); Serial.print(" "); Serial.print(data.z);
-//  
-  int pitch = (atan2(data.x,sqrt(data.y*data.y+data.z*data.z)) * 180.0) / PI;
-  int roll = (atan2(data.y,(sqrt(data.x*data.x+data.z*data.z))) * 180.0) / PI;
-  Serial.print("DEV:"); Serial.print(devNumber); Serial.print("    PITCH: "); Serial.print(pitch); Serial.print("    ROLL: "); Serial.print(roll);
+void showData(AdxlData data, int devNumber) {
+  Serial.print("DEV:"); Serial.println(devNumber); 
+  Serial.print("PITCH: "); Serial.print(data.rotate.pitch); Serial.print("    ROLL: "); Serial.println(data.rotate.roll);
+//  Serial.print("X:"); Serial.print(data.axes.x); Serial.print("  Y:"); Serial.print(data.axes.y); Serial.print("  Z:"); Serial.print(data.axes.z); 
   Serial.println();
 }
 
-void showAccelCalibratedData(Adxl345 device, int tcaSelectNumber) {
-  AxisesData data;
-  tcaselect(tcaSelectNumber);
-  data = device.readAccelCalibrated();
-  printData(tcaSelectNumber+1, data);
+bool isCorrect(Rotate rotate1, Rotate rotate2)
+{
+  if(abs(rotate1.roll - (-1)*rotate2.roll) > 30) {
+    return false ;
+  }
+
+  if(abs(rotate1.pitch - rotate2.pitch) > 30) {
+    return false ;
+  }
+
+  return true;
 }
 
 void loop()
 {
-  showAccelCalibratedData(adxlDev1, 0);
-  showAccelCalibratedData(adxlDev2, 1);
-  showAccelCalibratedData(adxlDev3, 2);
-  showAccelCalibratedData(adxlDev4, 3);
+  tcaselect(0);
+  adxlDev1.updateData();
+  tcaselect(1);
+  adxlDev2.updateData();
   
-  delay(1500);
+  showData(adxlDev1.getData(), 0);
+  showData(adxlDev2.getData(), 1);
+
+  if(isCorrect(adxlDev1.getData().rotate, adxlDev2.getData().rotate)) {
+    digitalWrite(ledPin, LOW);
+  }
+  else {
+    digitalWrite(ledPin, HIGH);
+  }
+
+  Serial.println("\n");
+//  delay(2000);
 
 }
 
