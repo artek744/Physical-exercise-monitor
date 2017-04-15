@@ -1,8 +1,20 @@
 #include <Adxl345.h>
 #include <math.h>
- 
-#define device1Address 0x53
+
+
+enum PostureMeasurement {INDEFINITE, CORRECT, INCORRECT};
+enum IncorrectPartBodyPoture {NOTHING, ARMS, BACK, ALL};
+
+// ----------------------------------------------------------
+// -------------------- DEVICES_ADDRESS ---------------------
+// ----------------------------------------------------------
+
 #define TCAADDR 0x70
+
+
+// ----------------------------------------------------------
+// -------------------- CALIBRATION DATA --------------------
+// ----------------------------------------------------------
 
 #define DEV1_OFFSET_X -63.50
 #define DEV1_OFFSET_Y -66.50
@@ -32,10 +44,42 @@
 #define DEV4_GAIN_Y 132.00
 #define DEV4_GAIN_Z 127.50
 
+
+// ----------------------------------------------------------
+// ------------------- SETTING PARAMETERS -------------------
+// ----------------------------------------------------------
+
+#define ROLL_THRESHOLD_FOR_ARMS_POSTURE 60
+#define PITCH_THRESHOLD_FOR_ARMS_POSTURE 10
+#define ROLL_THRESHOLD_FOR_BACK_POSTURE 15
+#define PITCH_THRESHOLD_FOR_BACK_POSTURE 30
+
+#define SOUND_FRAME_TIME_MSEC 50
+#define SOUND_FRAME_NUMBER 32
+
+
+// ----------------------------------------------------------
+// -------------------- GLOBAL VARIABLES --------------------
+// ----------------------------------------------------------
+
 Adxl345 adxlDev1 = Adxl345();
 Adxl345 adxlDev2 = Adxl345();
 Adxl345 adxlDev3 = Adxl345();
 Adxl345 adxlDev4 = Adxl345();
+
+int ledPin = 8;
+
+bool wrongArmsPostureSong[SOUND_FRAME_NUMBER] = {1,1, 0,0, 1,1, 0,0, 1,1, 0,0, 0,0, 0,0, 1,1, 0,0, 1,1, 0,0, 1,1, 0,0, 0,0, 0,0};
+bool wrongBackAndArmsPostureSound[SOUND_FRAME_NUMBER] = {1,1, 1,1, 1,1, 1,1, 1,1, 1,1, 0,0, 0,0, 1,1, 1,1, 1,1, 1,1, 1,1, 1,1, 0,0, 0,0};
+bool wrongBackPostureSound[SOUND_FRAME_NUMBER] = {1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 0,0};
+
+PostureMeasurement pm = INDEFINITE;
+IncorrectPartBodyPoture ipbp = NOTHING;
+
+static int soundFrameCounter = -1;
+static long int lastTime = millis();
+bool sound = LOW;
+
 
 void tcaselect(uint8_t i) {
   if (i > 7) return;
@@ -60,7 +104,54 @@ Axes createCalibrationStructure(float x, float y, float z)
   return calibrationStructure;
 }
 
-int ledPin = 8;
+void showData(AdxlData data, int devNumber) {
+  Serial.print("DEV:"); Serial.println(devNumber); 
+  Serial.print("PITCH: "); Serial.print(data.rotate.pitch); Serial.print("    ROLL: "); Serial.println(data.rotate.roll);
+//  Serial.print("X:"); Serial.print(data.axes.x); Serial.print("  Y:"); Serial.print(data.axes.y); Serial.print("  Z:"); Serial.print(data.axes.z); 
+  Serial.println();
+}
+
+bool isCorrect(Rotate rotate1, Rotate rotate2, int rollThreshold, int pitchThreshold, int secondRollMultiplier = 1, int secondPitchMultiplier = 1)
+{
+  if(abs(rotate1.roll - rotate2.roll*secondRollMultiplier) > rollThreshold) {
+    Serial.print("roll: "); Serial.println(abs(rotate1.roll - rotate2.roll*secondRollMultiplier));
+    return false ;
+  }
+
+  if(abs(rotate1.pitch - rotate2.pitch*secondPitchMultiplier) > pitchThreshold) {
+    Serial.print("pitch: "); Serial.println(abs(rotate1.pitch - rotate2.pitch*secondPitchMultiplier));
+    return false ;
+  }
+
+  return true;
+}
+
+void signaling(bool sound_array[], PostureMeasurement *pm_flag)
+{
+
+  
+  if(*pm_flag != INCORRECT) {
+    return;
+  }
+
+  if(millis() - lastTime > SOUND_FRAME_TIME_MSEC) {
+    lastTime = millis();
+    soundFrameCounter++;
+    
+    if(soundFrameCounter >= SOUND_FRAME_NUMBER) {
+      soundFrameCounter = -1;
+      *pm_flag = INDEFINITE;
+      digitalWrite(ledPin, LOW);
+      ipbp = NOTHING;
+      return;
+    }
+
+    sound = sound_array[soundFrameCounter];
+  }
+
+  digitalWrite(ledPin, sound);
+}
+
 
 void setup()
 {
@@ -76,36 +167,20 @@ void setup()
   Axes offsetDev2 = createCalibrationStructure(DEV2_OFFSET_X, DEV2_OFFSET_Y, DEV2_OFFSET_Z);
   Axes gainDev2 = createCalibrationStructure(DEV2_GAIN_X, DEV2_GAIN_Y, DEV2_GAIN_Z);
   
-//  Axes offsetDev3 = createCalibrationStructure(DEV3_OFFSET_X, DEV3_OFFSET_Y, DEV3_OFFSET_Z);
-//  Axes gainDev3 = createCalibrationStructure(DEV3_GAIN_X, DEV3_GAIN_Y, DEV3_GAIN_Z);
-//  
-//  Axes offsetDev4 = createCalibrationStructure(DEV4_OFFSET_X, DEV4_OFFSET_Y, DEV4_OFFSET_Z);
-//  Axes gainDev4 = createCalibrationStructure(DEV4_GAIN_X, DEV4_GAIN_Y, DEV4_GAIN_Z);
+  Axes offsetDev3 = createCalibrationStructure(DEV3_OFFSET_X, DEV3_OFFSET_Y, DEV3_OFFSET_Z);
+  Axes gainDev3 = createCalibrationStructure(DEV3_GAIN_X, DEV3_GAIN_Y, DEV3_GAIN_Z);
+  
+  Axes offsetDev4 = createCalibrationStructure(DEV4_OFFSET_X, DEV4_OFFSET_Y, DEV4_OFFSET_Z);
+  Axes gainDev4 = createCalibrationStructure(DEV4_GAIN_X, DEV4_GAIN_Y, DEV4_GAIN_Z);
   
   tcaselect(0);
   setupDevice(&adxlDev1, offsetDev1, gainDev1);
   tcaselect(1);
   setupDevice(&adxlDev2, offsetDev2, gainDev2);
-}
-
-void showData(AdxlData data, int devNumber) {
-  Serial.print("DEV:"); Serial.println(devNumber); 
-  Serial.print("PITCH: "); Serial.print(data.rotate.pitch); Serial.print("    ROLL: "); Serial.println(data.rotate.roll);
-//  Serial.print("X:"); Serial.print(data.axes.x); Serial.print("  Y:"); Serial.print(data.axes.y); Serial.print("  Z:"); Serial.print(data.axes.z); 
-  Serial.println();
-}
-
-bool isCorrect(Rotate rotate1, Rotate rotate2)
-{
-  if(abs(rotate1.roll - (-1)*rotate2.roll) > 30) {
-    return false ;
-  }
-
-  if(abs(rotate1.pitch - rotate2.pitch) > 30) {
-    return false ;
-  }
-
-  return true;
+  tcaselect(2);
+  setupDevice(&adxlDev3, offsetDev3, gainDev3);
+  tcaselect(3);
+  setupDevice(&adxlDev4, offsetDev4, gainDev4);
 }
 
 void loop()
@@ -114,20 +189,47 @@ void loop()
   adxlDev1.updateData();
   tcaselect(1);
   adxlDev2.updateData();
+  tcaselect(2);
+  adxlDev3.updateData();
+  tcaselect(3);
+  adxlDev4.updateData();
   
-  showData(adxlDev1.getData(), 0);
-  showData(adxlDev2.getData(), 1);
-
-  if(isCorrect(adxlDev1.getData().rotate, adxlDev2.getData().rotate)) {
-    digitalWrite(ledPin, LOW);
+  if(isCorrect(adxlDev3.getData().rotate, adxlDev4.getData().rotate, ROLL_THRESHOLD_FOR_ARMS_POSTURE, PITCH_THRESHOLD_FOR_ARMS_POSTURE, -1)) {
+    if(pm == INDEFINITE) {
+      pm = CORRECT;
+    }
   }
   else {
-    digitalWrite(ledPin, HIGH);
+    pm = INCORRECT;
+    ipbp = ARMS;
   }
 
-  Serial.println("\n");
-//  delay(2000);
-
+  if(isCorrect(adxlDev1.getData().rotate, adxlDev2.getData().rotate, ROLL_THRESHOLD_FOR_BACK_POSTURE, PITCH_THRESHOLD_FOR_BACK_POSTURE)) {
+    if(pm == INDEFINITE) {
+      pm = CORRECT;
+    }
+  }
+  else {
+    pm = INCORRECT;
+    if(ipbp == ARMS) {
+      ipbp = ALL;
+    }
+    else {
+      ipbp = BACK;
+    }
+  }
+  
+  switch(ipbp) {
+    case ARMS: 
+      signaling(wrongArmsPostureSong, &pm);
+      break;
+    case BACK:
+      signaling(wrongBackPostureSound, &pm);
+      break;
+    case ALL:
+      signaling(wrongBackAndArmsPostureSound, &pm);
+      break;    
+  }
 }
 
 
