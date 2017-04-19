@@ -23,26 +23,26 @@ enum IncorrectPartBodyPoture {NOTHING, ARMS, BACK, ALL};
 #define DEV1_GAIN_Y 131.00
 #define DEV1_GAIN_Z 138.00
 
-#define DEV2_OFFSET_X -0.50
-#define DEV2_OFFSET_Y -11.00
-#define DEV2_OFFSET_Z -5.50
-#define DEV2_GAIN_X 127.50
-#define DEV2_GAIN_Y 128.00
-#define DEV2_GAIN_Z 123.50
+#define DEV4_OFFSET_X -0.50
+#define DEV4_OFFSET_Y -11.00
+#define DEV4_OFFSET_Z -5.50
+#define DEV4_GAIN_X 127.50
+#define DEV4_GAIN_Y 128.00
+#define DEV4_GAIN_Z 123.50
 
-#define DEV3_OFFSET_X -1.50
-#define DEV3_OFFSET_Y -1.50
-#define DEV3_OFFSET_Z 3.50
-#define DEV3_GAIN_X 130.50
-#define DEV3_GAIN_Y 131.50
-#define DEV3_GAIN_Z 128.00
+#define DEV2_OFFSET_X -1.50
+#define DEV2_OFFSET_Y -1.50
+#define DEV2_OFFSET_Z 3.50
+#define DEV2_GAIN_X 130.50
+#define DEV2_GAIN_Y 131.50
+#define DEV2_GAIN_Z 128.00
 
-#define DEV4_OFFSET_X 12.00
-#define DEV4_OFFSET_Y -13.50
-#define DEV4_OFFSET_Z -18.00
-#define DEV4_GAIN_X 132.00
-#define DEV4_GAIN_Y 132.00
-#define DEV4_GAIN_Z 127.50
+#define DEV3_OFFSET_X 12.00
+#define DEV3_OFFSET_Y -13.50
+#define DEV3_OFFSET_Z -18.00
+#define DEV3_GAIN_X 132.00
+#define DEV3_GAIN_Y 132.00
+#define DEV3_GAIN_Z 127.50
 
 
 // ----------------------------------------------------------
@@ -69,7 +69,7 @@ Adxl345 adxlDev4 = Adxl345();
 
 int ledPin = 8;
 
-bool wrongArmsPostureSong[SOUND_FRAME_NUMBER] = {1,1, 0,0, 1,1, 0,0, 1,1, 0,0, 0,0, 0,0, 1,1, 0,0, 1,1, 0,0, 1,1, 0,0, 0,0, 0,0};
+bool wrongArmsPostureSong[SOUND_FRAME_NUMBER] = {1,0, 1,0, 1,0, 1,0, 1,1, 0,0, 0,0, 0,0, 1,0, 1,0, 1,0, 1,0, 1,1, 0,0, 0,0, 0,0};
 bool wrongBackAndArmsPostureSound[SOUND_FRAME_NUMBER] = {1,1, 1,1, 1,1, 1,1, 1,1, 1,1, 0,0, 0,0, 1,1, 1,1, 1,1, 1,1, 1,1, 1,1, 0,0, 0,0};
 bool wrongBackPostureSound[SOUND_FRAME_NUMBER] = {1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 0,0};
 
@@ -106,8 +106,8 @@ Axes createCalibrationStructure(float x, float y, float z)
 
 void showData(AdxlData data, int devNumber) {
   Serial.print("DEV:"); Serial.println(devNumber); 
-  Serial.print("PITCH: "); Serial.print(data.rotate.pitch); Serial.print("    ROLL: "); Serial.println(data.rotate.roll);
-//  Serial.print("X:"); Serial.print(data.axes.x); Serial.print("  Y:"); Serial.print(data.axes.y); Serial.print("  Z:"); Serial.print(data.axes.z); 
+//  Serial.print("PITCH: "); Serial.print(data.rotate.pitch); Serial.print("    ROLL: "); Serial.println(data.rotate.roll);
+  Serial.print("X:"); Serial.print(data.axes.x); Serial.print("  Y:"); Serial.print(data.axes.y); Serial.print("  Z:"); Serial.print(data.axes.z); 
   Serial.println();
 }
 
@@ -193,8 +193,8 @@ void loop()
   adxlDev3.updateData();
   tcaselect(3);
   adxlDev4.updateData();
-  
-  if(isCorrect(adxlDev3.getData().rotate, adxlDev4.getData().rotate, ROLL_THRESHOLD_FOR_ARMS_POSTURE, PITCH_THRESHOLD_FOR_ARMS_POSTURE, -1)) {
+
+  if(isCorrect(adxlDev2.getData().rotate, adxlDev4.getData().rotate, ROLL_THRESHOLD_FOR_ARMS_POSTURE, PITCH_THRESHOLD_FOR_ARMS_POSTURE, -1)) {
     if(pm == INDEFINITE) {
       pm = CORRECT;
     }
@@ -204,7 +204,7 @@ void loop()
     ipbp = ARMS;
   }
 
-  if(isCorrect(adxlDev1.getData().rotate, adxlDev2.getData().rotate, ROLL_THRESHOLD_FOR_BACK_POSTURE, PITCH_THRESHOLD_FOR_BACK_POSTURE)) {
+  if(isCorrect(adxlDev1.getData().rotate, adxlDev3.getData().rotate, ROLL_THRESHOLD_FOR_BACK_POSTURE, PITCH_THRESHOLD_FOR_BACK_POSTURE)) {
     if(pm == INDEFINITE) {
       pm = CORRECT;
     }
@@ -230,6 +230,9 @@ void loop()
       signaling(wrongBackAndArmsPostureSound, &pm);
       break;    
   }
+
+
+
 }
 
 
