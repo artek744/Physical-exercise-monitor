@@ -1,6 +1,7 @@
 #include <Adxl345.h>
 #include <math.h>
 
+#define MAX_NUMBER_OF_DEVICES 7
 
 enum PostureMeasurement {INDEFINITE, CORRECT, INCORRECT};
 enum IncorrectPartBodyPoture {NOTHING, ARMS, BACK, ALL};
@@ -49,9 +50,14 @@ enum IncorrectPartBodyPoture {NOTHING, ARMS, BACK, ALL};
 // ------------------- SETTING PARAMETERS -------------------
 // ----------------------------------------------------------
 
-#define ROLL_THRESHOLD_FOR_ARMS_POSTURE 60
-#define PITCH_THRESHOLD_FOR_ARMS_POSTURE 10
+//Boki
+#define ROLL_THRESHOLD_FOR_ARMS_POSTURE 20
+//Góra dół
+#define PITCH_THRESHOLD_FOR_ARMS_POSTURE 12
+
+//Boki
 #define ROLL_THRESHOLD_FOR_BACK_POSTURE 15
+//Góra dół
 #define PITCH_THRESHOLD_FOR_BACK_POSTURE 30
 
 #define SOUND_FRAME_TIME_MSEC 50
@@ -81,10 +87,10 @@ static long int lastTime = millis();
 bool sound = LOW;
 
 
-void tcaselect(uint8_t i) {
-  if (i > 7) return;
+void tcaselect(uint8_t deviceNumber) {
+  if (deviceNumber > MAX_NUMBER_OF_DEVICES) return;
   Wire.beginTransmission(TCAADDR);
-  Wire.write(1 << i);
+  Wire.write(1 << deviceNumber);
   Wire.endTransmission();
 }
 
@@ -106,7 +112,7 @@ Axes createCalibrationStructure(float x, float y, float z)
 
 void showData(AdxlData data, int devNumber) {
   Serial.print("DEV:"); Serial.println(devNumber); 
-//  Serial.print("PITCH: "); Serial.print(data.rotate.pitch); Serial.print("    ROLL: "); Serial.println(data.rotate.roll);
+  Serial.print("PITCH: "); Serial.print(data.rotate.pitch); Serial.print("    ROLL: "); Serial.println(data.rotate.roll);
   Serial.print("X:"); Serial.print(data.axes.x); Serial.print("  Y:"); Serial.print(data.axes.y); Serial.print("  Z:"); Serial.print(data.axes.z); 
   Serial.println();
 }
@@ -194,7 +200,12 @@ void loop()
   tcaselect(3);
   adxlDev4.updateData();
 
-  if(isCorrect(adxlDev2.getData().rotate, adxlDev4.getData().rotate, ROLL_THRESHOLD_FOR_ARMS_POSTURE, PITCH_THRESHOLD_FOR_ARMS_POSTURE, -1)) {
+  showData(adxlDev2.getData(), 2);
+  showData(adxlDev3.getData(), 3);
+  Serial.println();
+  Serial.println();
+  
+  if(isCorrect(adxlDev2.getData().rotate, adxlDev3.getData().rotate, ROLL_THRESHOLD_FOR_ARMS_POSTURE, PITCH_THRESHOLD_FOR_ARMS_POSTURE, -1)) {
     if(pm == INDEFINITE) {
       pm = CORRECT;
     }
@@ -204,7 +215,8 @@ void loop()
     ipbp = ARMS;
   }
 
-  if(isCorrect(adxlDev1.getData().rotate, adxlDev3.getData().rotate, ROLL_THRESHOLD_FOR_BACK_POSTURE, PITCH_THRESHOLD_FOR_BACK_POSTURE)) {
+// MONITORING BACK POSTURE
+  if(isCorrect(adxlDev1.getData().rotate, adxlDev4.getData().rotate, ROLL_THRESHOLD_FOR_BACK_POSTURE, PITCH_THRESHOLD_FOR_BACK_POSTURE, -1, -1)) {
     if(pm == INDEFINITE) {
       pm = CORRECT;
     }
@@ -230,6 +242,8 @@ void loop()
       signaling(wrongBackAndArmsPostureSound, &pm);
       break;    
   }
+
+//  delay(2000);
 
 
 
