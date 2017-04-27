@@ -60,7 +60,7 @@ enum IncorrectPartBodyPoture {NOTHING, ARMS, BACK, ALL};
 //Góra dół
 #define PITCH_THRESHOLD_FOR_BACK_POSTURE 30
 
-#define SOUND_FRAME_TIME_MSEC 50
+#define SOUND_FRAME_TIME_MSEC 25
 #define SOUND_FRAME_NUMBER 32
 
 
@@ -111,21 +111,23 @@ Axes createCalibrationStructure(float x, float y, float z)
 }
 
 void showData(AdxlData data, int devNumber) {
-  Serial.print("DEV:"); Serial.println(devNumber); 
-  Serial.print("PITCH: "); Serial.print(data.rotate.pitch); Serial.print("    ROLL: "); Serial.println(data.rotate.roll);
-  Serial.print("X:"); Serial.print(data.axes.x); Serial.print("  Y:"); Serial.print(data.axes.y); Serial.print("  Z:"); Serial.print(data.axes.z); 
-  Serial.println();
+//  Serial.print("DEV:"); Serial.println(devNumber); 
+//  Serial.print("PITCH: "); Serial.print(data.rotate.pitch); Serial.print("    ROLL: "); Serial.println(data.rotate.roll);
+  Serial.print(data.rotate.pitch); Serial.print(" "); Serial.print(data.rotate.roll); Serial.print(" "); 
+//  Serial.print(data.axes.x); Serial.print(" "); Serial.print(data.axes.y); Serial.print(" "); Serial.print(data.axes.z); Serial.print(" ");
+//  Serial.print("X:"); Serial.print(data.axes.x); Serial.print("  Y:"); Serial.print(data.axes.y); Serial.print("  Z:"); Serial.println(data.axes.z); 
+
 }
 
 bool isCorrect(Rotate rotate1, Rotate rotate2, int rollThreshold, int pitchThreshold, int secondRollMultiplier = 1, int secondPitchMultiplier = 1)
 {
   if(abs(rotate1.roll - rotate2.roll*secondRollMultiplier) > rollThreshold) {
-    Serial.print("roll: "); Serial.println(abs(rotate1.roll - rotate2.roll*secondRollMultiplier));
+//    Serial.print("roll: "); Serial.println(abs(rotate1.roll - rotate2.roll*secondRollMultiplier));
     return false ;
   }
 
   if(abs(rotate1.pitch - rotate2.pitch*secondPitchMultiplier) > pitchThreshold) {
-    Serial.print("pitch: "); Serial.println(abs(rotate1.pitch - rotate2.pitch*secondPitchMultiplier));
+//    Serial.print("pitch: "); Serial.println(abs(rotate1.pitch - rotate2.pitch*secondPitchMultiplier));
     return false ;
   }
 
@@ -187,6 +189,9 @@ void setup()
   setupDevice(&adxlDev3, offsetDev3, gainDev3);
   tcaselect(3);
   setupDevice(&adxlDev4, offsetDev4, gainDev4);
+
+  Serial.println ("Hit a key to start");  
+  while(Serial.available() == 0){}
 }
 
 void loop()
@@ -199,10 +204,11 @@ void loop()
   adxlDev3.updateData();
   tcaselect(3);
   adxlDev4.updateData();
-
+//
+  showData(adxlDev1.getData(), 1);
+  showData(adxlDev4.getData(), 4);
   showData(adxlDev2.getData(), 2);
   showData(adxlDev3.getData(), 3);
-  Serial.println();
   Serial.println();
   
   if(isCorrect(adxlDev2.getData().rotate, adxlDev3.getData().rotate, ROLL_THRESHOLD_FOR_ARMS_POSTURE, PITCH_THRESHOLD_FOR_ARMS_POSTURE, -1)) {
@@ -216,7 +222,7 @@ void loop()
   }
 
 // MONITORING BACK POSTURE
-  if(isCorrect(adxlDev1.getData().rotate, adxlDev4.getData().rotate, ROLL_THRESHOLD_FOR_BACK_POSTURE, PITCH_THRESHOLD_FOR_BACK_POSTURE, -1, -1)) {
+  if(isCorrect(adxlDev1.getData().rotate, adxlDev4.getData().rotate, ROLL_THRESHOLD_FOR_BACK_POSTURE, PITCH_THRESHOLD_FOR_BACK_POSTURE, -1)) {
     if(pm == INDEFINITE) {
       pm = CORRECT;
     }
