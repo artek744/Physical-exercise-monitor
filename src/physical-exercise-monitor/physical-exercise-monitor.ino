@@ -1,17 +1,16 @@
 #include <Adxl345.h>
 #include <math.h>
 
-#define MAX_NUMBER_OF_DEVICES 7
 
 enum PostureMeasurement {INDEFINITE, CORRECT, INCORRECT};
 enum IncorrectPartBodyPoture {NOTHING, ARMS, BACK, ALL};
+
 
 // ----------------------------------------------------------
 // -------------------- DEVICES_ADDRESS ---------------------
 // ----------------------------------------------------------
 
 #define TCAADDR 0x70
-
 
 // ----------------------------------------------------------
 // -------------------- CALIBRATION DATA --------------------
@@ -50,18 +49,16 @@ enum IncorrectPartBodyPoture {NOTHING, ARMS, BACK, ALL};
 // ------------------- SETTING PARAMETERS -------------------
 // ----------------------------------------------------------
 
-//Boki
 #define ROLL_THRESHOLD_FOR_ARMS_POSTURE 20
-//Góra dół
-#define PITCH_THRESHOLD_FOR_ARMS_POSTURE 12
+#define PITCH_THRESHOLD_FOR_ARMS_POSTURE 22
 
-//Boki
 #define ROLL_THRESHOLD_FOR_BACK_POSTURE 15
-//Góra dół
 #define PITCH_THRESHOLD_FOR_BACK_POSTURE 30
 
 #define SOUND_FRAME_TIME_MSEC 25
 #define SOUND_FRAME_NUMBER 32
+
+#define MAX_NUMBER_OF_DEVICES 7
 
 
 // ----------------------------------------------------------
@@ -73,18 +70,23 @@ Adxl345 adxlDev2 = Adxl345();
 Adxl345 adxlDev3 = Adxl345();
 Adxl345 adxlDev4 = Adxl345();
 
-int ledPin = 8;
+int notifyPin = 8;
 
-bool wrongArmsPostureSong[SOUND_FRAME_NUMBER] = {1,0, 1,0, 1,0, 1,0, 1,1, 0,0, 0,0, 0,0, 1,0, 1,0, 1,0, 1,0, 1,1, 0,0, 0,0, 0,0};
+bool wrongArmsPostureSound[SOUND_FRAME_NUMBER] = {1,0, 1,0, 1,0, 1,0, 1,1, 0,0, 0,0, 0,0, 1,0, 1,0, 1,0, 1,0, 1,1, 0,0, 0,0, 0,0};
 bool wrongBackAndArmsPostureSound[SOUND_FRAME_NUMBER] = {1,1, 1,1, 1,1, 1,1, 1,1, 1,1, 0,0, 0,0, 1,1, 1,1, 1,1, 1,1, 1,1, 1,1, 0,0, 0,0};
 bool wrongBackPostureSound[SOUND_FRAME_NUMBER] = {1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 1,1, 0,0, 0,0, 0,0};
 
 PostureMeasurement pm = INDEFINITE;
-IncorrectPartBodyPoture ipbp = NOTHING;
+IncorrectPartBodyPoture incorrectPartBodyPoture = NOTHING;
 
 static int soundFrameCounter = -1;
 static long int lastTime = millis();
 bool sound = LOW;
+
+
+// ----------------------------------------------------------
+// ----------------------------------------------------------
+// ----------------------------------------------------------
 
 
 void tcaselect(uint8_t deviceNumber) {
@@ -94,7 +96,7 @@ void tcaselect(uint8_t deviceNumber) {
   Wire.endTransmission();
 }
 
-void setupDevice(const Adxl345 *device, Axes offset, Axes gain) {
+void setupDevice(Adxl345 *device, Axes offset, Axes gain) {
   device->powerOn();
   device->setRangeSetting(4);            
   device->calibrate(offset, gain);
@@ -110,24 +112,13 @@ Axes createCalibrationStructure(float x, float y, float z)
   return calibrationStructure;
 }
 
-void showData(AdxlData data, int devNumber) {
-//  Serial.print("DEV:"); Serial.println(devNumber); 
-//  Serial.print("PITCH: "); Serial.print(data.rotate.pitch); Serial.print("    ROLL: "); Serial.println(data.rotate.roll);
-  Serial.print(data.rotate.pitch); Serial.print(" "); Serial.print(data.rotate.roll); Serial.print(" "); 
-//  Serial.print(data.axes.x); Serial.print(" "); Serial.print(data.axes.y); Serial.print(" "); Serial.print(data.axes.z); Serial.print(" ");
-//  Serial.print("X:"); Serial.print(data.axes.x); Serial.print("  Y:"); Serial.print(data.axes.y); Serial.print("  Z:"); Serial.println(data.axes.z); 
-
-}
-
 bool isCorrect(Rotate rotate1, Rotate rotate2, int rollThreshold, int pitchThreshold, int secondRollMultiplier = 1, int secondPitchMultiplier = 1)
 {
   if(abs(rotate1.roll - rotate2.roll*secondRollMultiplier) > rollThreshold) {
-//    Serial.print("roll: "); Serial.println(abs(rotate1.roll - rotate2.roll*secondRollMultiplier));
     return false ;
   }
 
   if(abs(rotate1.pitch - rotate2.pitch*secondPitchMultiplier) > pitchThreshold) {
-//    Serial.print("pitch: "); Serial.println(abs(rotate1.pitch - rotate2.pitch*secondPitchMultiplier));
     return false ;
   }
 
@@ -135,9 +126,7 @@ bool isCorrect(Rotate rotate1, Rotate rotate2, int rollThreshold, int pitchThres
 }
 
 void signaling(bool sound_array[], PostureMeasurement *pm_flag)
-{
-
-  
+{  
   if(*pm_flag != INCORRECT) {
     return;
   }
@@ -149,25 +138,23 @@ void signaling(bool sound_array[], PostureMeasurement *pm_flag)
     if(soundFrameCounter >= SOUND_FRAME_NUMBER) {
       soundFrameCounter = -1;
       *pm_flag = INDEFINITE;
-      digitalWrite(ledPin, LOW);
-      ipbp = NOTHING;
+      digitalWrite(notifyPin, LOW);
+      incorrectPartBodyPoture = NOTHING;
       return;
     }
 
     sound = sound_array[soundFrameCounter];
   }
 
-  digitalWrite(ledPin, sound);
+  digitalWrite(notifyPin, sound);
 }
 
 
 void setup()
 {
-  pinMode(ledPin, OUTPUT);
+  pinMode(notifyPin, OUTPUT);
   
   Wire.begin();
-  Serial.begin(9600);  // start serial for output
-  Serial.println("\n\nSTART:\n");
 
   Axes offsetDev1 = createCalibrationStructure(DEV1_OFFSET_X, DEV1_OFFSET_Y, DEV1_OFFSET_Z);
   Axes gainDev1 = createCalibrationStructure(DEV1_GAIN_X, DEV1_GAIN_Y, DEV1_GAIN_Z);
@@ -190,8 +177,6 @@ void setup()
   tcaselect(3);
   setupDevice(&adxlDev4, offsetDev4, gainDev4);
 
-  Serial.println ("Hit a key to start");  
-  while(Serial.available() == 0){}
 }
 
 void loop()
@@ -204,12 +189,7 @@ void loop()
   adxlDev3.updateData();
   tcaselect(3);
   adxlDev4.updateData();
-//
-  showData(adxlDev1.getData(), 1);
-  showData(adxlDev4.getData(), 4);
-  showData(adxlDev2.getData(), 2);
-  showData(adxlDev3.getData(), 3);
-  Serial.println();
+
   
   if(isCorrect(adxlDev2.getData().rotate, adxlDev3.getData().rotate, ROLL_THRESHOLD_FOR_ARMS_POSTURE, PITCH_THRESHOLD_FOR_ARMS_POSTURE, -1)) {
     if(pm == INDEFINITE) {
@@ -218,10 +198,9 @@ void loop()
   }
   else {
     pm = INCORRECT;
-    ipbp = ARMS;
+    incorrectPartBodyPoture = ARMS;
   }
 
-// MONITORING BACK POSTURE
   if(isCorrect(adxlDev1.getData().rotate, adxlDev4.getData().rotate, ROLL_THRESHOLD_FOR_BACK_POSTURE, PITCH_THRESHOLD_FOR_BACK_POSTURE, -1)) {
     if(pm == INDEFINITE) {
       pm = CORRECT;
@@ -229,17 +208,17 @@ void loop()
   }
   else {
     pm = INCORRECT;
-    if(ipbp == ARMS) {
-      ipbp = ALL;
+    if(incorrectPartBodyPoture == ARMS) {
+      incorrectPartBodyPoture = ALL;
     }
     else {
-      ipbp = BACK;
+      incorrectPartBodyPoture = BACK;
     }
   }
   
-  switch(ipbp) {
+  switch(incorrectPartBodyPoture) {
     case ARMS: 
-      signaling(wrongArmsPostureSong, &pm);
+      signaling(wrongArmsPostureSound, &pm);
       break;
     case BACK:
       signaling(wrongBackPostureSound, &pm);
@@ -249,13 +228,4 @@ void loop()
       break;    
   }
 
-//  delay(2000);
-
-
-
 }
-
-
-
-
-
