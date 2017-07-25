@@ -89,143 +89,142 @@ bool sound = LOW;
 // ----------------------------------------------------------
 
 
-void tcaselect(uint8_t deviceNumber) {
-  if (deviceNumber > MAX_NUMBER_OF_DEVICES) return;
-  Wire.beginTransmission(TCAADDR);
-  Wire.write(1 << deviceNumber);
-  Wire.endTransmission();
+void tcaselect(uint8_t deviceNumber)
+{
+	if (deviceNumber > MAX_NUMBER_OF_DEVICES) return;
+	Wire.beginTransmission(TCAADDR);
+	Wire.write(1 << deviceNumber);
+	Wire.endTransmission();
 }
 
-void setupDevice(Adxl345 *device, Axes offset, Axes gain) {
-  device->powerOn();
-  device->setRangeSetting(4);            
-  device->calibrate(offset, gain);
+void setupDevice(Adxl345 *device, Axes offset, Axes gain)
+{
+	device->powerOn();
+	device->setRangeSetting(4);
+	device->calibrate(offset, gain);
 }
 
 Axes createCalibrationStructure(float x, float y, float z)
 {
-  Axes calibrationStructure;
-  calibrationStructure.x = x;
-  calibrationStructure.y = y;
-  calibrationStructure.z = z;
+	Axes calibrationStructure;
+	calibrationStructure.x = x;
+	calibrationStructure.y = y;
+	calibrationStructure.z = z;
 
-  return calibrationStructure;
+	return calibrationStructure;
 }
 
 bool isCorrect(Rotate rotate1, Rotate rotate2, int rollThreshold, int pitchThreshold, int secondRollMultiplier = 1, int secondPitchMultiplier = 1)
 {
-  if(abs(rotate1.roll - rotate2.roll*secondRollMultiplier) > rollThreshold) {
-    return false ;
-  }
+	if(abs(rotate1.roll - rotate2.roll*secondRollMultiplier) > rollThreshold) {
+		return false ;
+	}
 
-  if(abs(rotate1.pitch - rotate2.pitch*secondPitchMultiplier) > pitchThreshold) {
-    return false ;
-  }
+	if(abs(rotate1.pitch - rotate2.pitch*secondPitchMultiplier) > pitchThreshold) {
+		return false ;
+	}
 
-  return true;
+	return true;
 }
 
 void signaling(bool sound_array[], PostureMeasurement *pm_flag)
-{  
-  if(*pm_flag != INCORRECT) {
-    return;
-  }
+{
+	if(*pm_flag != INCORRECT) {
+		return;
+	}
 
-  if(millis() - lastTime > SOUND_FRAME_TIME_MSEC) {
-    lastTime = millis();
-    soundFrameCounter++;
-    
-    if(soundFrameCounter >= SOUND_FRAME_NUMBER) {
-      soundFrameCounter = -1;
-      *pm_flag = INDEFINITE;
-      digitalWrite(notifyPin, LOW);
-      incorrectPartBodyPoture = NOTHING;
-      return;
-    }
+	if(millis() - lastTime > SOUND_FRAME_TIME_MSEC) {
+		lastTime = millis();
+		soundFrameCounter++;
 
-    sound = sound_array[soundFrameCounter];
-  }
+		if(soundFrameCounter >= SOUND_FRAME_NUMBER) {
+			soundFrameCounter = -1;
+			*pm_flag = INDEFINITE;
+			digitalWrite(notifyPin, LOW);
+			incorrectPartBodyPoture = NOTHING;
+			return;
+		}
 
-  digitalWrite(notifyPin, sound);
+		sound = sound_array[soundFrameCounter];
+	}
+
+	digitalWrite(notifyPin, sound);
 }
 
 
 void setup()
 {
-  pinMode(notifyPin, OUTPUT);
-  
-  Wire.begin();
+	pinMode(notifyPin, OUTPUT);
 
-  Axes offsetDev1 = createCalibrationStructure(DEV1_OFFSET_X, DEV1_OFFSET_Y, DEV1_OFFSET_Z);
-  Axes gainDev1 = createCalibrationStructure(DEV1_GAIN_X, DEV1_GAIN_Y, DEV1_GAIN_Z);
-  
-  Axes offsetDev2 = createCalibrationStructure(DEV2_OFFSET_X, DEV2_OFFSET_Y, DEV2_OFFSET_Z);
-  Axes gainDev2 = createCalibrationStructure(DEV2_GAIN_X, DEV2_GAIN_Y, DEV2_GAIN_Z);
-  
-  Axes offsetDev3 = createCalibrationStructure(DEV3_OFFSET_X, DEV3_OFFSET_Y, DEV3_OFFSET_Z);
-  Axes gainDev3 = createCalibrationStructure(DEV3_GAIN_X, DEV3_GAIN_Y, DEV3_GAIN_Z);
-  
-  Axes offsetDev4 = createCalibrationStructure(DEV4_OFFSET_X, DEV4_OFFSET_Y, DEV4_OFFSET_Z);
-  Axes gainDev4 = createCalibrationStructure(DEV4_GAIN_X, DEV4_GAIN_Y, DEV4_GAIN_Z);
-  
-  tcaselect(0);
-  setupDevice(&adxlDev1, offsetDev1, gainDev1);
-  tcaselect(1);
-  setupDevice(&adxlDev2, offsetDev2, gainDev2);
-  tcaselect(2);
-  setupDevice(&adxlDev3, offsetDev3, gainDev3);
-  tcaselect(3);
-  setupDevice(&adxlDev4, offsetDev4, gainDev4);
+	Wire.begin();
 
+	Axes offsetDev1 = createCalibrationStructure(DEV1_OFFSET_X, DEV1_OFFSET_Y, DEV1_OFFSET_Z);
+	Axes gainDev1 = createCalibrationStructure(DEV1_GAIN_X, DEV1_GAIN_Y, DEV1_GAIN_Z);
+
+	Axes offsetDev2 = createCalibrationStructure(DEV2_OFFSET_X, DEV2_OFFSET_Y, DEV2_OFFSET_Z);
+	Axes gainDev2 = createCalibrationStructure(DEV2_GAIN_X, DEV2_GAIN_Y, DEV2_GAIN_Z);
+
+	Axes offsetDev3 = createCalibrationStructure(DEV3_OFFSET_X, DEV3_OFFSET_Y, DEV3_OFFSET_Z);
+	Axes gainDev3 = createCalibrationStructure(DEV3_GAIN_X, DEV3_GAIN_Y, DEV3_GAIN_Z);
+
+	Axes offsetDev4 = createCalibrationStructure(DEV4_OFFSET_X, DEV4_OFFSET_Y, DEV4_OFFSET_Z);
+	Axes gainDev4 = createCalibrationStructure(DEV4_GAIN_X, DEV4_GAIN_Y, DEV4_GAIN_Z);
+
+	tcaselect(0);
+	setupDevice(&adxlDev1, offsetDev1, gainDev1);
+	tcaselect(1);
+	setupDevice(&adxlDev2, offsetDev2, gainDev2);
+	tcaselect(2);
+	setupDevice(&adxlDev3, offsetDev3, gainDev3);
+	tcaselect(3);
+	setupDevice(&adxlDev4, offsetDev4, gainDev4);
 }
 
 void loop()
 {
-  tcaselect(0);
-  adxlDev1.updateData();
-  tcaselect(1);
-  adxlDev2.updateData();
-  tcaselect(2);
-  adxlDev3.updateData();
-  tcaselect(3);
-  adxlDev4.updateData();
+	tcaselect(0);
+	adxlDev1.updateData();
+	tcaselect(1);
+	adxlDev2.updateData();
+	tcaselect(2);
+	adxlDev3.updateData();
+	tcaselect(3);
+	adxlDev4.updateData();
 
-  
-  if(isCorrect(adxlDev2.getData().rotate, adxlDev3.getData().rotate, ROLL_THRESHOLD_FOR_ARMS_POSTURE, PITCH_THRESHOLD_FOR_ARMS_POSTURE, -1)) {
-    if(pm == INDEFINITE) {
-      pm = CORRECT;
-    }
-  }
-  else {
-    pm = INCORRECT;
-    incorrectPartBodyPoture = ARMS;
-  }
+	if(isCorrect(adxlDev2.getData().rotate, adxlDev3.getData().rotate, ROLL_THRESHOLD_FOR_ARMS_POSTURE, PITCH_THRESHOLD_FOR_ARMS_POSTURE, -1)) {
+		if(pm == INDEFINITE) {
+			pm = CORRECT;
+		}
+	}
+	else {
+		pm = INCORRECT;
+		incorrectPartBodyPoture = ARMS;
+	}
 
-  if(isCorrect(adxlDev1.getData().rotate, adxlDev4.getData().rotate, ROLL_THRESHOLD_FOR_BACK_POSTURE, PITCH_THRESHOLD_FOR_BACK_POSTURE, -1)) {
-    if(pm == INDEFINITE) {
-      pm = CORRECT;
-    }
-  }
-  else {
-    pm = INCORRECT;
-    if(incorrectPartBodyPoture == ARMS) {
-      incorrectPartBodyPoture = ALL;
-    }
-    else {
-      incorrectPartBodyPoture = BACK;
-    }
-  }
-  
-  switch(incorrectPartBodyPoture) {
-    case ARMS: 
-      signaling(wrongArmsPostureSound, &pm);
-      break;
-    case BACK:
-      signaling(wrongBackPostureSound, &pm);
-      break;
-    case ALL:
-      signaling(wrongBackAndArmsPostureSound, &pm);
-      break;    
-  }
+	if(isCorrect(adxlDev1.getData().rotate, adxlDev4.getData().rotate, ROLL_THRESHOLD_FOR_BACK_POSTURE, PITCH_THRESHOLD_FOR_BACK_POSTURE, -1)) {
+		if(pm == INDEFINITE) {
+			pm = CORRECT;
+		}
+	}
+	else {
+		pm = INCORRECT;
+		if(incorrectPartBodyPoture == ARMS) {
+			incorrectPartBodyPoture = ALL;
+		}
+		else {
+			incorrectPartBodyPoture = BACK;
+		}
+	}
 
+	switch(incorrectPartBodyPoture) {
+		case ARMS:
+			signaling(wrongArmsPostureSound, &pm);
+			break;
+		case BACK:
+			signaling(wrongBackPostureSound, &pm);
+			break;
+		case ALL:
+			signaling(wrongBackAndArmsPostureSound, &pm);
+			break;
+	}
 }
